@@ -11,8 +11,13 @@ const signing = require('./signing');
  *   - have been modified since signing
  */
 const isValidTransaction = transaction => {
-  // Enter your solution here
-
+  return transaction.amount < 0 ?
+    false
+    : signing.verify(
+      transaction.source,
+      transaction.source + transaction.recipient + transaction.amount,
+      transaction.signature
+    );
 };
 
 /**
@@ -22,8 +27,11 @@ const isValidTransaction = transaction => {
  *   - they contain any invalid transactions
  */
 const isValidBlock = block => {
-  // Your code here
-
+  const transactions = block.transactions.map(tx => tx.signature);
+  const toHash = transactions + block.previousHash + block.nonce;
+  return block.hash !== createHash('sha256').update(toHash).digest('hex') ?
+    false
+    : block.transactions.every(isValidTransaction);
 };
 
 /**
@@ -37,8 +45,22 @@ const isValidBlock = block => {
  *   - contains any invalid transactions
  */
 const isValidChain = blockchain => {
-  // Your code here
+  const { blocks } = blockchain;
+  if (blocks[0].previousHash !== null) {
+    return false;
+  }
+  if (!blocks.slice(1).every((b, i) => b.previousHash === blocks[i].hash)) {    
+    return false;
+  }
 
+  if (!blocks.every(b => isValidBlock(b))) {
+    return false;
+  } 
+
+  return blocks
+    .map(b => b.transactions)
+    .reduce((flat, transactions) => [...flat, ...transactions])
+    .every(isValidTransaction);
 };
 
 /**
@@ -47,8 +69,7 @@ const isValidChain = blockchain => {
  * (in theory) make the blockchain fail later validation checks;
  */
 const breakChain = blockchain => {
-  // Your code here
-
+  blockchain.blocks[0].previousHash = 'hello world';
 };
 
 module.exports = {
